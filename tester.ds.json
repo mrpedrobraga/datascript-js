@@ -1,8 +1,5 @@
 [
   ["--This is a comment--"],
-  ["write", "Hello world!"],
-  ["write", "Hello world! x2"],
-  ["if", true, [
-    ["write", "true!"]
-  ]]
+  ["set", "t", "Hello world!"],
+  ["write", ["get", "t"]]
 ]

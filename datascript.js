@@ -11,16 +11,58 @@ export function readJSON(path) {
 /**
  * Class that holds the information for the context
  * of execution of a DataScript script.
+ * @class
+ * @constructor
  * */
 export class DataScriptExecutionContext {
   /**
-   * @type {DataScriptBackendLibrary}*/
-  library
-
-  /**
    * @param {DataScriptBackendLibrary} library*/
   constructor(library) {
+    /**
+    * @type {DataScriptBackendLibrary}
+    * @public
+    * */
     this.library = library
+
+    /**
+    * @type {boolean}
+    * @public
+    */
+    this.last_condition_check_was_successful = false
+
+    /**
+     * @type {object[]}
+     * @public
+     */
+    this.local_variable_stack = [{}]
+  }
+
+  /** Creates a new stack context for local variables. */
+  vstack_push() {
+    return this.local_variable_stack.push([{}])
+  }
+
+  /** Drops the last stack context for local variables. */
+  vstack_pop () {
+    return this.local_variable_stack.pop()
+  }
+
+  /** Sets the closest variable with a given name to a value. */
+  setVar(name, value) {
+    for (let i = this.local_variable_stack.length - 1; i >= 0; i--) {
+      const frame = this.local_variable_stack[i]
+      if (name in frame) frame[name] = value
+    }
+    this.local_variable_stack.at(-2)[name] = value
+  }
+
+  /** Gets the closest variable with a given name. */
+  getVar(name) {
+    for (let i = this.local_variable_stack.length - 1; i >= 0; i--) {
+      const frame = this.local_variable_stack[i]
+      if (name in frame) return frame[name]
+    }
+    throw `Variable ${name} not declared.`
   }
 }
 
@@ -94,11 +136,18 @@ export async function executeInstruction(instruction, _context) {
   if (i_keyword.startsWith("--") && i_keyword.endsWith("--")) { return null }
 
   let params = instruction.slice(1)
+  let result
 
   if (_context.library.meta_functions.includes(i_keyword)) {
     params.unshift(_context)
+    _context.vstack_push()
+    result = await _context.library[i_keyword](...params)
+    _context.vstack_pop()
   } else {
+    _context.last_condition_check_was_successful = false
     params = await Promise.all(params.map(async (param) => await execute(param, _context)))
+    result = await _context.library[i_keyword](...params)
   }
-  return await _context.library[i_keyword](...params)
+
+  return result
 }

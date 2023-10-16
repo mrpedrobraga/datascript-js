@@ -1,5 +1,5 @@
 {
-  "name": "datascript-js",
+  "name": "datascript",
   "version": "1.0.0",
   "description": "Simple runtime for DataScript.",
   "main": "index.js",
